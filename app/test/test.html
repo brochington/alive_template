@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Mocha Spec Runner</title>
+    <link rel="stylesheet" href="../styles/mocha.css">
+            <link rel="stylesheet" href="../styles/alive_template.css">
+</head>
+<body>
+    <div id="mocha"></div>
+
+    <div id="destNode"></div>
+
+    <div class="myList" data-template="list">
+        <span>Hello ${person}</span>
+        <div class="testBox1 ${colorClass}"></div>
+        <div class="list_items"></div>
+    </div>
+
+    <div data-template="list_items">
+        <div class="someText">${text}</div>
+    </div>
+
+    <script data-main="../scripts/test" src="../scripts/require.js"></script>
+</body>
+</html>
+
