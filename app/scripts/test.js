@@ -10,7 +10,7 @@ require([
 	window.t = atpl;
 
 	/************************* sandbox **************************/
-
+	console.time('total');
 	var templateInstance = atpl.list.createTemplateInstance({
 		data: {person1: 'Broch', person2: 'Stilley', colorClass: 'myClass'},
 		destination: document.getElementById('destNode'),
@@ -25,7 +25,11 @@ require([
 		}]
 	});
 
+	console.timeEnd('total');
+
 	window.ti = templateInstance;
+
+	// templateInstance.pushDomNodeClone();
 
 	/************************************************************/
 
