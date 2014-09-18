@@ -2,7 +2,8 @@ define([
 	'alive_pubsub/alive_pubsub'
 	], function(ps){
 
-		var ipRegEx = /\$\{(\w+)\}/g;
+		var ipRegEx = /\$\{(\w+)\}/g,
+			localTemplates = null; // so we can access Templates internally.
 
 	function Templates(){
 		var self = this;
@@ -62,7 +63,7 @@ define([
 		this.templateInstances = [];
 	}
 
-	Template.prototype.createTemplateInstance = function(data){
+	Template.prototype.createTemplateInstance = function(data, id){
 		var tplInstance = new TemplateInstance(this, data);
 		this.templateInstances.push(tplInstance);
 		return tplInstance;
@@ -120,14 +121,14 @@ define([
 			for(var i = 0, l = textValueArr.length;i<l;i++){
 				if(textValueArr[i].indexOf('${') !== -1){
 					var ipName = textValueArr[i].slice(2, -1);
-
+					
 					this.insertionPoints[ipName] = new InsertionPoint({
 						templateInstance: this,
 						nodeId: nodeId,
 						textValueArr: textValueArr,
 						textValueArrIndex: i,
 						ipName: ipName,
-						originalIP: "${" + textValueArr[i] + "}",
+						originalIP: textValueArr[i],
 						node: node,
 						previousIPValue: null,
 						startIndex: null,
@@ -144,6 +145,7 @@ define([
 							}
 						}
 					});
+					
 				}
 			}
 		},
@@ -152,16 +154,27 @@ define([
 		}
 	}
 
-	function TemplateInstance(tplRef, data){
+	function TemplateInstance(tplRef, data, id){
 
+		this.id = id || null;
 		this.node = tplRef.tplNodeClone.cloneNode(true);
+		this.nodeClone = tplRef.tplNodeClone.cloneNode(true);
 		this.insertionPoints = {};
+		this.eachLoopInstances = {};
 		this.textValueArr = null;
 		this.nodeIds = {};
 
 		this.processInsertionPoints(this.node);
+
 		this.updateIPValues(data.data);
 
+
+		for(var key in data){
+			console.log(key);
+			if(TemplateInstance.prototype.bindings[key]){
+				TemplateInstance.prototype.bindings[key].call(this, data);
+			}
+		}
 
 		if(data.destination){
 			this.destination = data.destination;
@@ -170,13 +183,34 @@ define([
 		}
 	}
 
-	TemplateInstance.prototype.updateIPValues = function(data){
+	TemplateInstance.prototype.bindings = {
+		each: function(data){
+			var d = data.each;
+			console.log('called each', d);
+
+			// loop over each instance of each.
+			for(var i = 0, l = d.length;i<l;i++){
+				// ei == each instance.
+				var ei = d[i],
+					eachLoopId = getRandomInt(0, 1000000);
+				console.log(this);
+				this.eachLoopInstances[eachLoopId] = new EachLoopInstance(d[i], eachLoopId, this);
+			}
+
+			for(var id in this.eachLoopInstances){
+				this.eachLoopInstances[id].buildTemplateInstances();
+			}
+		}
+	};
+
+	TemplateInstance.prototype.updateIPValues = function(data){ 
+		
 		for(var key in data){
 			if(this.insertionPoints[key]){
 				this.insertionPoints[key].updateIPValue(data[key], 'no');
 			}
 		}
-
+		
 		this.callNodeIdFunctions();
 	}
 
@@ -200,6 +234,7 @@ define([
 		if(!(callNodeIdFunctions == 'no')){
 			this.templateInstance.callNodeIdFunctions();
 		}
+		
 	}
 
 	InsertionPoint.prototype.updateTextNode = function(){
@@ -211,6 +246,69 @@ define([
 		}
 
 		this.node.nodeValue = tempStr;
+	}
+
+	function EachLoopInstance(data, id, templateInstance){
+		this.id = id;
+		this.originalData = data;
+		this.templateToUse = data.template || null;
+		this.templateInstance = templateInstance;
+		this.insertDestination = data.insert;
+		this.insertDestNodeCollection = templateInstance.nodeClone.getElementsByClassName(data.insert);
+		this.nodeCollections = {};
+		this.nodeInternals = null;
+		
+	}
+
+	EachLoopInstance.prototype.buildTemplateInstances = function(){
+		console.log('buildTemplateInstances');
+		var ti = this.templateInstance;
+
+		if(this.insertDestNodeCollection){
+			// for every node that matches the class...
+			for(var i = 0, l=this.insertDestNodeCollection.length;i<l;i++){
+				var collectionId = getRandomInt(0,1000000000);
+				this.nodeCollections[collectionId] = {
+					loopTemplateInstances: {}
+				};
+				// for every object in data array...
+				for(var j = 0,m=this.originalData.data.length;j<m;j++){
+					if(this.originalData){
+						if(this.templateToUse){
+							console.log(this.templateToUse);
+							var localId = getRandomInt(0, 1000000000);
+
+							this.nodeCollections[collectionId].loopTemplateInstances[localId] = localTemplates[this.templateToUse].createTemplateInstance({
+								data: this.originalData[i]
+							}, localId);
+							console.log(this.originalData.data);
+							this.nodeCollections[collectionId].loopTemplateInstances[localId].updateIPValues(this.originalData.data[j]);
+						}
+					}
+				}
+			}
+		}
+		console.log(this);
+
+		this.constructNodeInternals();
+	}
+
+	EachLoopInstance.prototype.constructNodeInternals = function(){
+		console.log('constructNodeInternals');
+
+		// this.nodeInternals = 
+		// this.updateIPValues(data.data);
+
+
+		for(var collection in this.nodeCollections){
+			for(var id in this.nodeCollections[collection].loopTemplateInstances){
+				var ti  = this.nodeCollections[collection].loopTemplateInstances[id];
+
+				ti.updateIPValues();
+				console.log(ti);
+
+			}
+		}
 	}
 
 	// returns an array of insertionPoint names.
@@ -231,8 +329,11 @@ define([
 	}
 
 		function getRandomInt(min, max) {
-		return Math.floor(Math.random() * (max - min)) + min;
+
+			return Math.floor(Math.random() * (max - min)) + min;
 	}
 
-	return new Templates();
+	localTemplates = new Templates();
+
+	return localTemplates;
 });

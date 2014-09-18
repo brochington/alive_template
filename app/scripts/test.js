@@ -15,9 +15,13 @@ require([
 		data: {person1: 'Broch', person2: 'Stilley', colorClass: 'myClass'},
 		destination: document.getElementById('destNode'),
 		each: [{
-			text: 'This is my first list Item',
-		}, {
-			text: 'Here is my secon list Item'
+			insert: 'list_items',
+			template: 'list_items',
+			data: [{
+				text: 'This is my first list Item'
+			},{
+				text: 'Here is some more text'
+			}]
 		}]
 	});
 
