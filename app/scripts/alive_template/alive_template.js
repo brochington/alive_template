@@ -77,7 +77,10 @@ define([
 
 			if(cn.nodeName == '#text' && cn.data.indexOf('${') >= 0){
 				// handle text node that has insertionPoint in it
-				this.insertionPointGenerators['innerText'].call(this, cn);
+				var nodeId = getRandomInt(0, 100000000);
+				this.nodeIds[nodeId] = [];
+
+				this.insertionPointGenerators['innerText'].call(this, cn, nodeId);
 			}
 
 			if(cn.classList && cn.classList.length > 0){
@@ -94,52 +97,71 @@ define([
 	}
 
 	TemplateInstance.prototype.insertionPointGenerators = {
-		innerText: function(node){
-			var ipNamesArr = getIPNamesFromStr(node.nodeValue);
+		innerText: function(node, nodeId){
+			var ipNamesArr = getIPNamesFromStr(node.nodeValue),
+				nodeVal = node.nodeValue,
+				tempString = node.nodeValue,
+				textValueArr = [];
 
-			for(var i = 0, l = ipNamesArr.length; i<l; i++){
-				this.insertionPoints[ipNamesArr[i]] = new InsertionPoint({
-					template: this,
-					originalIP: '${' + ipNamesArr[i] + '}',
-					node: node,
-					previousIPValue: null,
-					updateIPValueCallback: function(val){
-						console.log('bam');
-						var self = this,
-							strToReplace = this.previousIPValue ? this.previousIPValue : this.originalIP;
+			// TODO: Break this out into a separate function.
+			for(var i = 0, l=ipNamesArr.length; i<l;i++){
+				var ip = '${' + ipNamesArr[i] + '}',
+					tempStrArr = tempString.split(ip);
 
-							console.log(strToReplace);
+				textValueArr.push(tempStrArr[0]);
+				tempString = tempStrArr[1];
+				textValueArr.push(ip);
 
-							console.dir(this.node.nodeValue);
+				if(l == i+1){
+					textValueArr.push(tempString);
+				};
+			}
 
-							this.node.nodeValue = this.node.nodeValue.replace(strToReplace, val);
+			for(var i = 0, l = textValueArr.length;i<l;i++){
+				if(textValueArr[i].indexOf('${') !== -1){
+					var ipName = textValueArr[i].slice(2, -1);
 
-							this.previousIPValue = val;
+					this.insertionPoints[ipName] = new InsertionPoint({
+						templateInstance: this,
+						nodeId: nodeId,
+						textValueArr: textValueArr,
+						textValueArrIndex: i,
+						ipName: ipName,
+						originalIP: "${" + textValueArr[i] + "}",
+						node: node,
+						previousIPValue: null,
+						startIndex: null,
+						endIndex: null,
+						updateIPValueCallback: function(val){
+							console.log('bam', val);
+							var self = this,
+								tempStr = '';
 
-							console.log(this.node);
-					}
-				})
+							this.textValueArr[this.textValueArrIndex] = val;
+
+							if(this.templateInstance.nodeIds[nodeId] && this.templateInstance.nodeIds[nodeId].length == 0){
+								this.templateInstance.nodeIds[nodeId].push(this.updateTextNode.bind(this));
+							}
+						}
+					});
+				}
 			}
 		},
 		className: function(node){
-			console.log('reached className');
+			// console.log('reached className');
 		}
 	}
 
 	function TemplateInstance(tplRef, data){
-		console.log('creating a template instance');
-		console.log(tplRef);
-		console.log(data);
 
 		this.node = tplRef.tplNodeClone.cloneNode(true);
 		this.insertionPoints = {};
-
-
-		console.log(this.node);
+		this.textValueArr = null;
+		this.nodeIds = {};
 
 		this.processInsertionPoints(this.node);
-
 		this.updateIPValues(data.data);
+
 
 		if(data.destination){
 			this.destination = data.destination;
@@ -150,9 +172,18 @@ define([
 
 	TemplateInstance.prototype.updateIPValues = function(data){
 		for(var key in data){
-			console.log('updating: ', key);
 			if(this.insertionPoints[key]){
-				this.insertionPoints[key].updateIPValue(data[key]);	
+				this.insertionPoints[key].updateIPValue(data[key], 'no');
+			}
+		}
+
+		this.callNodeIdFunctions();
+	}
+
+	TemplateInstance.prototype.callNodeIdFunctions = function(){
+		for(var nodeId in this.nodeIds){
+			for(var i=0,l=this.nodeIds[nodeId].length;i<l;i++){
+				this.nodeIds[nodeId][i]();
 			}
 		}
 	}
@@ -163,8 +194,23 @@ define([
 		}
 	}
 
-	InsertionPoint.prototype.updateIPValue = function(val){
+	InsertionPoint.prototype.updateIPValue = function(val, callNodeIdFunctions){
 		this.updateIPValueCallback.call(this, val);
+
+		if(!(callNodeIdFunctions == 'no')){
+			this.templateInstance.callNodeIdFunctions();
+		}
+	}
+
+	InsertionPoint.prototype.updateTextNode = function(){
+		console.log('updateTextNode');
+		var tempStr = '';
+
+		for(var j = 0, m = this.textValueArr.length;j<m;j++){
+			tempStr = tempStr.concat([this.textValueArr[j]]);
+		}
+
+		this.node.nodeValue = tempStr;
 	}
 
 	// returns an array of insertionPoint names.
@@ -182,6 +228,10 @@ define([
 			newStr = newStr.substr(1);
 		}
 		return newStr;
+	}
+
+		function getRandomInt(min, max) {
+		return Math.floor(Math.random() * (max - min)) + min;
 	}
 
 	return new Templates();

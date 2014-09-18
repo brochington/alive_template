@@ -12,7 +12,7 @@ require([
 	/************************* sandbox **************************/
 
 	var templateInstance = atpl.list.createTemplateInstance({
-		data: {person: 'Broch', colorClass: 'myClass'},
+		data: {person1: 'Broch', person2: 'Stilley', colorClass: 'myClass'},
 		destination: document.getElementById('destNode'),
 		each: [{
 			text: 'This is my first list Item',
