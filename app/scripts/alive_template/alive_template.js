@@ -72,6 +72,8 @@ define([
 	}
 
 	function TemplateInstance(tplRef, data, id){
+		var bindingKeys = [],
+			self = this;
 
 		this.id = id || null;
 		this.node = tplRef.tplNodeClone.cloneNode(true);
@@ -85,12 +87,25 @@ define([
 
 		this.updateIPValues(data.data);
 
-
+		//process bindings on data object.
 		for(var key in data){
 			if(TemplateInstance.prototype.bindings[key]){
+				bindingKeys.push(key);
 				TemplateInstance.prototype.bindings[key].call(this, data);
 			}
 		}
+
+		bindingKeys.forEach(function (v, i, arr){
+			Object.defineProperty(self, v, {
+				get: function(){
+					console.log(key);
+					return key;
+				},
+				set: function(val){
+					console.log(val, key);
+				}
+			})
+		})
 
 		if(data.destination){
 			this.destination = data.destination;
