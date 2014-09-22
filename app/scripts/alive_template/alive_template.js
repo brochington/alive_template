@@ -113,21 +113,22 @@ define([
 	}
 
 	TemplateInstance.prototype.processInsertionPoints = function(node){
-		var self = this;
+		var self = this, nodeId;
 
 		for(var i = 0,l = node.childNodes.length; i<l;i++){
 			var cn = node.childNodes[i];
 
 			if(cn.nodeName == '#text' && cn.data.indexOf('${') >= 0){
 				// handle text node that has insertionPoint in it
-				var nodeId = getRandomInt(0, 100000000);
+				nodeId = getRandomInt(0, 100000000);
 				this.nodeIds[nodeId] = [];
 
 				this.insertionPointGenerators['innerText'].call(this, cn, nodeId);
 			}
 
 			if(cn.classList && cn.classList.length > 0){
-				this.insertionPointGenerators['className'].call(this, cn);
+				nodeId = getRandomInt(0, 100000000);
+				this.insertionPointGenerators['className'].call(this, cn, nodeId);
 			}
 		}
 
@@ -190,8 +191,37 @@ define([
 				}
 			}
 		},
-		className: function(node){
-			// console.log('reached className');
+		className: function(node, nodeId){
+			var classArr = node.className.split(' ');
+
+			if(classArr){
+				for(var i = 0, l = classArr.length;i<l;i++){
+					if(classArr[i].indexOf('${') !== -1){
+						var ipName = classArr[i].slice(2, -1);
+
+						this.insertionPoints[ipName] = new InsertionPoint({
+							templateInstance: this,
+							nodeId: nodeId,
+							ipName: ipName,
+							originalIP: classArr[i],
+							classIndex: i,
+							node: node,
+							previousIPValue: null,
+							updateIPValueCallback: function(val){
+								var self = this,
+									tempStr = '';
+
+								if(typeof val == 'string'){
+									console.log('val is a string');
+									var tempClassArr = val.split(' ');
+								}
+
+								console.log('updateIPValueCallback for ');
+							}
+						})
+					}
+				}
+			}
 		}
 	}
 
@@ -279,7 +309,6 @@ define([
 	}
 
 	EachLoopInstance.prototype.buildTemplateInstances = function(){
-		// console.log('buildTemplateInstances');
 		var ti = this.templateInstance;
 
 		if(this.insertDestNodeCollection){
@@ -318,10 +347,10 @@ define([
 	EachLoopInstance.prototype.constructNodeInternals = function(){
 
 		for(var collection in this.nodeCollections){
-			for(var id in this.nodeCollections[collection].loopTemplateInstances){
-				var ti  = this.nodeCollections[collection].loopTemplateInstances[id];
+			var ti = this.nodeCollections[collection].loopTemplateInstances;
 
-				this.nodeCollections[collection].nodeFrag.appendChild(ti.nodeClone);
+			for(var i = 0,l = ti.length; i<l;i++){
+				this.nodeCollections[collection].nodeFrag.appendChild(ti[i].nodeClone);				
 			}
 		}
 	}
@@ -338,9 +367,13 @@ define([
 	// returns an array of insertionPoint names.
 	function getIPNamesFromStr(str){
 
-		return str.match(ipRegEx).map(function(ip){
-			return ip.slice(2, ip.lastIndexOf('}'));
-		});
+		var match = str.match(ipRegEx);
+
+		if(match){
+			return str.match(ipRegEx).map(function(ip){
+				return ip.slice(2, ip.lastIndexOf('}'));
+			});
+		}
 	}
 
 	function removeIPFromStr(str, ipName){
