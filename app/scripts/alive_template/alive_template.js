@@ -64,7 +64,6 @@ define([
 	}
 
 	Template.prototype.createTemplateInstance = function(data, id){
-		console.log('createTemplateInstance', data);
 		var tplInstance = new TemplateInstance(this, data);
 		this.templateInstances.push(tplInstance);
 		return tplInstance;
@@ -202,13 +201,15 @@ define([
 
 			// loop over each instance of each.
 			for(var i = 0, l = d.length;i<l;i++){
-				// ei == each instance.
 				var ei = d[i],
 					eachLoopId = getRandomInt(0, 1000000);
 				this.eachLoopInstances[eachLoopId] = new EachLoopInstance(d[i], eachLoopId, this);
+				// this.eachLoopInstances.push(new EachLoopInstance(d[i], eachLoopId, this));
 			}
-
+			// eachLoopInstances needs to be an array so that order can be guarenteed.
 			for(var id in this.eachLoopInstances){
+				// console.log('id: ', id);
+				// console.log(this.eachLoopInstances[id]);
 				this.eachLoopInstances[id].buildTemplateInstances();
 				this.eachLoopInstances[id].updateLoopFragInDom();
 			}
@@ -278,7 +279,7 @@ define([
 	}
 
 	EachLoopInstance.prototype.buildTemplateInstances = function(){
-		console.log('buildTemplateInstances');
+		// console.log('buildTemplateInstances');
 		var ti = this.templateInstance;
 
 		if(this.insertDestNodeCollection){
@@ -287,7 +288,8 @@ define([
 				var collectionId = getRandomInt(0,1000000000);
 
 				this.nodeCollections[collectionId] = {
-					loopTemplateInstances: {},
+					// loopTemplateInstances: {},
+					loopTemplateInstances: [],
 					node: this.insertDestNodeCollection[i],
 					nodeFrag: document.createDocumentFragment()
 				};
@@ -295,18 +297,16 @@ define([
 				// for every object in data array...
 				for(var j = 0,m=this.originalData.data.length;j<m;j++){
 					if(this.originalData && this.originalData.data[j] !== undefined){
-						console.log('bam', this.originalData.data[j]);
+						// console.log('bam', this.originalData.data[j]);
 						if(this.templateToUse){
-							var localId = getRandomInt(0, 1000000000);
-
 							// populate template instances in node collections.
-							this.nodeCollections[collectionId].loopTemplateInstances[localId] = localTemplates[this.templateToUse].createTemplateInstance({
+							this.nodeCollections[collectionId].loopTemplateInstances[j] = localTemplates[this.templateToUse].createTemplateInstance({
 								data: this.originalData.data[j],
-								destination: this.templateInstance.nodeClone
-							}, localId);
+								destination: this.insertDestNodeCollection[i]
+							}, getRandomInt(0, 10000000));
 
 							// update the values stored in instances.
-							this.nodeCollections[collectionId].loopTemplateInstances[localId].updateIPValues(this.originalData.data[j]);
+							this.nodeCollections[collectionId].loopTemplateInstances[j].updateIPValues(this.originalData.data[j]);
 						}
 					}
 				}
@@ -322,8 +322,6 @@ define([
 				var ti  = this.nodeCollections[collection].loopTemplateInstances[id];
 
 				this.nodeCollections[collection].nodeFrag.appendChild(ti.nodeClone);
-				// this.nodeCollections[collection].node.insertBefore()
-
 			}
 		}
 	}
