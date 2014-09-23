@@ -127,7 +127,9 @@ define([
 			}
 
 			if(cn.classList && cn.classList.length > 0){
-				nodeId = getRandomInt(0, 100000000);
+				nodeId = getRandomInt(0, 100000000); // not DRY...
+				this.nodeIds[nodeId] = [];
+
 				this.insertionPointGenerators['className'].call(this, cn, nodeId);
 			}
 		}
@@ -177,8 +179,6 @@ define([
 						startIndex: null,
 						endIndex: null,
 						updateIPValueCallback: function(val){
-							var self = this,
-								tempStr = '';
 
 							this.textValueArr[this.textValueArrIndex] = val;
 
@@ -204,19 +204,25 @@ define([
 							nodeId: nodeId,
 							ipName: ipName,
 							originalIP: classArr[i],
+							classNameVal: node.className,
 							classIndex: i,
 							node: node,
-							previousIPValue: null,
+							classValArr: classArr,
 							updateIPValueCallback: function(val){
-								var self = this,
-									tempStr = '';
-
+								var tempStr = '';
+								
 								if(typeof val == 'string'){
-									console.log('val is a string');
-									var tempClassArr = val.split(' ');
+									this.classValArr[this.classIndex] = val;
+								}else if(val instanceof Array){
+									for(var i = 0,l = val.length;i<l; i++){
+										tempStr += val[i] + (i+1 == l ? '' : ' ');
+									}
+									this.classValArr[this.classIndex] = tempStr;
 								}
 
-								console.log('updateIPValueCallback for ');
+								if(this.templateInstance.nodeIds[nodeId] && this.templateInstance.nodeIds[nodeId].length == 0){
+									this.templateInstance.nodeIds[nodeId].push(this.updateClassNames.bind(this));
+								}
 							}
 						})
 					}
@@ -295,6 +301,21 @@ define([
 		}
 
 		this.node.nodeValue = tempStr;
+	}
+
+	InsertionPoint.prototype.updateClassNames = function(){
+		console.log('reached updateClassNames');
+		console.log(this);
+
+		var tempStr = '';
+
+		for(var i = 0,l = this.classValArr.length;i<l;i++){
+			tempStr += this.classValArr[i] + (i+1 == l ? '': ' ');
+		}
+
+		console.log(tempStr);
+
+		this.node.className = tempStr
 	}
 
 	function EachLoopInstance(data, id, templateInstance){

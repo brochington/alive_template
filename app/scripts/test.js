@@ -12,7 +12,7 @@ require([
 	/************************* sandbox **************************/
 	console.time('total');
 	var templateInstance = atpl.list.createTemplateInstance({
-		data: {person1: 'Broch', person2: 'Stilley', colorClass: 'myClass'},
+		data: {person1: 'Broch', person2: 'Stilley', colorClass: 'myClass', myTestClass: ['helloHello', 'helloBroch']},
 		destination: document.getElementById('destNode'),
 		each: [{
 			insert: 'list_items',
