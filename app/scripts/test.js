@@ -22,14 +22,22 @@ require([
 			},{
 				text: 'Here is some more text'
 			}]
-		}]
+		}],
+		// if will/won't have dom actually "rendered"
+		if: {
+			target: "hideMe",
+			data: false
+		}
+		// show/hide will add display: none to Dom.
+		show: {
+			target: 'something',
+			data: 'maybe a function here?'
+		}
 	});
 
 	console.timeEnd('total');
 
 	window.ti = templateInstance;
-
-	// templateInstance.pushDomNodeClone();
 
 	/************************************************************/
 

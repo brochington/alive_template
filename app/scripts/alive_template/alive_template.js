@@ -210,7 +210,8 @@ define([
 							classValArr: classArr,
 							updateIPValueCallback: function(val){
 								var tempStr = '';
-								
+								// TODO: will need to make update a brand new classname string.
+								// in case it changes without alive template knowing.
 								if(typeof val == 'string'){
 									this.classValArr[this.classIndex] = val;
 								}else if(val instanceof Array){
@@ -249,6 +250,9 @@ define([
 				this.eachLoopInstances[id].buildTemplateInstances();
 				this.eachLoopInstances[id].updateLoopFragInDom();
 			}
+		},
+		if: function(data){
+			console.log('reached if');
 		}
 	};
 
@@ -297,23 +301,18 @@ define([
 		var tempStr = '';
 
 		for(var j = 0, m = this.textValueArr.length;j<m;j++){
-			tempStr = tempStr.concat([this.textValueArr[j]]);
+			tempStr += this.textValueArr[j];
 		}
 
 		this.node.nodeValue = tempStr;
 	}
 
 	InsertionPoint.prototype.updateClassNames = function(){
-		console.log('reached updateClassNames');
-		console.log(this);
-
 		var tempStr = '';
 
 		for(var i = 0,l = this.classValArr.length;i<l;i++){
 			tempStr += this.classValArr[i] + (i+1 == l ? '': ' ');
 		}
-
-		console.log(tempStr);
 
 		this.node.className = tempStr
 	}
