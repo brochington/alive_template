@@ -236,25 +236,86 @@ define([
 		each: function(data){
 			var d = data.each;
 
+
 			// loop over each instance of each.
 			for(var i = 0, l = d.length;i<l;i++){
 				var ei = d[i],
 					eachLoopId = getRandomInt(0, 1000000);
 				this.eachLoopInstances[eachLoopId] = new EachLoopInstance(d[i], eachLoopId, this);
-				// this.eachLoopInstances.push(new EachLoopInstance(d[i], eachLoopId, this));
 			}
-			// eachLoopInstances needs to be an array so that order can be guarenteed.
+
 			for(var id in this.eachLoopInstances){
-				// console.log('id: ', id);
-				// console.log(this.eachLoopInstances[id]);
 				this.eachLoopInstances[id].buildTemplateInstances();
 				this.eachLoopInstances[id].updateLoopFragInDom();
 			}
 		},
 		if: function(data){
-			console.log('reached if');
+			if(data.if instanceof Array){
+				for(var i = 0,l = data.if.length;i<l;i++){
+					for(var key in data.data){
+						if(key == data.if[i].use && data.data[key] == true){
+							this.removeDomOnTplInstance(data.if[i].target);
+						}
+					}	
+				}
+			}else if(data.if.use){
+				for(var key in data.data){
+					if(key == data.if.use && data.data[key] == true){
+						this.removeDomOnTplInstance(data.if.target);
+					}
+				}
+			}
+
+
+		},
+		show: function(data){
+
+			if(data.show.use){
+				for(var key in data.data){
+					if(key == data.show.use && data.data[key] !== true){
+						this.addDisplayNoneToTarget(data.show.target);
+					}
+				}
+			}
+		},
+		style: function(data){
+
+			if(data.style.use){
+				for(var key in data.data){
+					if(key == data.style.use && data.data[key]){
+						this.updateStyleOnTarget(data.style.target, data.data[key]);
+					}
+				}
+			}
+
 		}
 	};
+
+	TemplateInstance.prototype.updateStyleOnTarget = function(target, data){
+		var domNodes = this.nodeClone.querySelectorAll(target);
+
+		for(var i = 0,l = domNodes.length; i<l; i++){
+			for(var styleAttr in data){
+				domNodes[i].style[styleAttr] = data[styleAttr];
+			}
+		}
+	}
+
+	TemplateInstance.prototype.addDisplayNoneToTarget = function(target){
+		var domNodes = this.nodeClone.querySelectorAll(target);
+
+		for(var i = 0,l = domNodes.length; i<l;i++){
+			domNodes[i].style.display = 'none'
+		}
+	}
+
+	TemplateInstance.prototype.removeDomOnTplInstance = function(target){
+		var domNodes = this.nodeClone.querySelectorAll(target);
+
+		for(var i = 0, l = domNodes.length; i<l;i++){
+			this.nodeClone.removeChild(domNodes[i]);
+		}
+	}
 
 	TemplateInstance.prototype.updateIPValues = function(data){ 
 		
@@ -318,6 +379,8 @@ define([
 	}
 
 	function EachLoopInstance(data, id, templateInstance){
+		var supportedBindings = ['each','if'];
+
 		this.id = id;
 		this.originalData = data;
 		this.templateToUse = data.template || null;
@@ -325,7 +388,14 @@ define([
 		this.insertDestination = data.insert;
 		this.insertDestNodeCollection = templateInstance.nodeClone.getElementsByClassName(data.insert);
 		this.nodeCollections = {};
-		
+
+		for(var i = 0,l = supportedBindings.length;i<l;i++){
+			var key = supportedBindings[i];
+			if(data[key]){
+				this[key] = data[key];
+			}
+		}
+
 	}
 
 	EachLoopInstance.prototype.buildTemplateInstances = function(){
@@ -337,7 +407,6 @@ define([
 				var collectionId = getRandomInt(0,1000000000);
 
 				this.nodeCollections[collectionId] = {
-					// loopTemplateInstances: {},
 					loopTemplateInstances: [],
 					node: this.insertDestNodeCollection[i],
 					nodeFrag: document.createDocumentFragment()
@@ -346,13 +415,15 @@ define([
 				// for every object in data array...
 				for(var j = 0,m=this.originalData.data.length;j<m;j++){
 					if(this.originalData && this.originalData.data[j] !== undefined){
-						// console.log('bam', this.originalData.data[j]);
 						if(this.templateToUse){
 							// populate template instances in node collections.
-							this.nodeCollections[collectionId].loopTemplateInstances[j] = localTemplates[this.templateToUse].createTemplateInstance({
+							var configObj = {
 								data: this.originalData.data[j],
-								destination: this.insertDestNodeCollection[i]
-							}, getRandomInt(0, 10000000));
+								destination: this.insertDestNodeCollection[i],
+								if: this.if
+							};
+
+							this.nodeCollections[collectionId].loopTemplateInstances[j] = localTemplates[this.templateToUse].createTemplateInstance( configObj, getRandomInt(0, 10000000));
 
 							// update the values stored in instances.
 							this.nodeCollections[collectionId].loopTemplateInstances[j].updateIPValues(this.originalData.data[j]);
@@ -373,6 +444,10 @@ define([
 				this.nodeCollections[collection].nodeFrag.appendChild(ti[i].nodeClone);				
 			}
 		}
+	}
+
+	EachLoopInstance.prototype.removeDomFromNodeClone = function(){
+		console.log('removeDomFromNodeClone');
 	}
 
 	EachLoopInstance.prototype.updateLoopFragInDom = function(){
@@ -405,9 +480,9 @@ define([
 		return newStr;
 	}
 
-		function getRandomInt(min, max) {
+	function getRandomInt(min, max) {
 
-			return Math.floor(Math.random() * (max - min)) + min;
+		return Math.floor(Math.random() * (max - min)) + min;
 	}
 
 	localTemplates = new Templates();
